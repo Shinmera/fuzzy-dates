@@ -1,0 +1,12 @@
+# About Fuzzy-Dates
+This is a small library to very fuzzily parse time and date strings into a universal-time timestamp. Among the fuzzily supported formats are:
+
+- Forwards and backwards relative stamps
+- Clocks
+- RFC1123
+- RFC3339
+- ISO8661
+- Weedays and months
+- UNIX timestamps
+
+In short, it should parse almost anything you throw at it and give you a reasonable timestamp for it. Note that while this does make this parsing rather suitable for parsing human input, there's still ambiguities that cannot be resolved, such as whether the user thinks dates are YMD, DMY, or MDY.
