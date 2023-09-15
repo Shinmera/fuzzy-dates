@@ -19,6 +19,21 @@
                                  `(T ,@body)
                                  `((cl-ppcre:scan ,(format NIL "^~a$" regex) ,varg) ,@body)))))))
 
+(defun gcheck-error (errorp string)
+  (when errorp
+    (restart-case
+        (error "Unknown date string: ~a" string)
+      (use-value (v)
+        :report "Supply a universal time"
+        :interactive (lambda () 
+                       (format *query-io* "~&Enter a universal time: ")
+                       (parse-integer (read-line *query-io*)))
+        :test integerp
+        v)
+      (continue ()
+        :report "Return the current time"
+        (get-universal-time)))))
+
 (defun backfill-timestamp (y o d h m s tz)
   (multiple-value-bind (ls lm lh ld lo ly) (apply #'decode-universal-time (get-universal-time) (if tz (list tz)))
     (let ((time (apply #'encode-universal-time (or s ls) (or m lm) (or h lh) (or d ld) (or o lo) (or y ly) (if tz (list tz)))))
@@ -79,69 +94,125 @@
     ("(h|hours?)" 3600)
     ("(d|days?)" 86400)
     ("(w|weeks?)" 604800)
-    ("(mo|months?)" 2592000)
+    ("(o|mo|months?)" 2592000)
     ("(y|years?)" 31536000)
-    ("(de|decades?)" 315532800)
-    ("(c|century|centuries)" 3155695200)
+    ("(dc|dec|decades?)" 315532800)
+    ("(c|cen|century|centuries)" 3155695200)
     ("(a|aeons?)" 31536000000000000)
     (T (when errorp (error "Unknown time unit: ~a" u)))))
+
+(defun decode-integer (i &optional errorp)
+  (with-scans i
+    (".*[ -].*"
+     (let ((total 0) (prev most-positive-fixnum))
+       (loop for part in (cl-ppcre:split "[ -]" i)
+             for int = (or (decode-integer part errorp)
+                           (return-from decode-integer NIL))
+             do (if (< prev int)
+                    (setf total (* int total))
+                      (incf total int))
+                (setf prev int))
+       total))
+    ("\\d+" (parse-integer i))
+    ("one" 1)
+    ("two" 2)
+    ("three" 3)
+    ("four" 4)
+    ("five" 5)
+    ("six" 6)
+    ("seven" 7)
+    ("eight" 8)
+    ("nine" 9)
+    ("ten" 10)
+    ("eleven" 11)
+    ("twelve" 12)
+    ("thirteen" 13)
+    ("fourteen" 14)
+    ("fifteen" 15)
+    ("sixteen" 16)
+    ("seventeen" 17)
+    ("eighteen" 18)
+    ("nineteen" 19)
+    ("twenty" 20)
+    ("thirty" 30)
+    ("fou?rty" 40)
+    ("fifty" 50)
+    ("sixty" 60)
+    ("seventy" 70)
+    ("eighty" 80)
+    ("ninety" 90)
+    ("hundred" 100)
+    ("thousand" 1000)
+    ("million" 1000000)
+    ("billion" 1000000000)
+    ("trillion" 1000000000000)
+    (T (when errorp (error "Unknown integer: ~a" i)))))
 
 (defun decode-timezone (tz &optional errorp)
   (or (when (or (null tz) (string= "z" tz) (string= "" tz)) 0)
       (gethash tz *tzdb*)
+             when int
       (when errorp (error "Unknown time zone: ~a" tz))))
 
-(defun parse-forward-time (string)
-  ;; in 5m, 9s
-  (cl-ppcre:register-groups-bind (parts) ("^in *(.*)$" string)
-    (let ((sum (get-universal-time)))
-      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
-        (cl-ppcre:register-groups-bind (c u) ("(\\d*) *(.*)" part)
-          (incf sum (* (parse-integer* c) (decode-unit u T))))))))
+(defmacro define-parser (name (strvar &optional (errorp (gensym "ERRORP"))) &body body)
+  `(defun ,name (,strvar &optional ,errorp)
+     (let ((,strvar (string-downcase ,strvar)))
+       (or ,@body
+           (check-error ,errorp ,strvar)))))
 
-(defun parse-backward-time (string)
-  ;; 10 seconds ago
-  (cl-ppcre:register-groups-bind (parts) ("^(.*) *ago$" string)
-    (let ((sum (get-universal-time)))
-      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
-        (cl-ppcre:register-groups-bind (c u) ("(\\d*) *(.*)" part)
-          (decf sum (* (parse-integer* c) (decode-unit u T))))))))
-
-(defun parse-timezone (string)
+(define-parser parse-timezone (string)
   ;; JST+5:00
   (with-integers-bound (_z _+ oh om) ("(\\w+)? *([+\\-])(\\d{1,2})(?::*(\\d+))?$" string)
     (+ (decode-timezone _z)
        (* (if (string= "-" _+) -1 +1)
           (+ (* (or oh 0) (/ (or om 0) 60)))))))
 
-(defun parse-rfc3339-like (string)
+(define-parser parse-forward-time (string errorp)
+  ;; in 5m, 9s
+  (cl-ppcre:register-groups-bind (parts) ("^in *(.*)$" string)
+    (let ((sum (get-universal-time)))
+      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
+        (cl-ppcre:register-groups-bind (c u) ("([\\d\\w]*) *(.*)" part)
+          (incf sum (* (or (decode-integer c errorp) (return NIL))
+                       (or (decode-unit u errorp) (return NIL)))))))))
+
+(define-parser parse-backward-time (string errorp)
+  ;; 10 seconds ago
+  (cl-ppcre:register-groups-bind (parts) ("^(.*) *ago$" string)
+    (let ((sum (get-universal-time)))
+      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
+        (cl-ppcre:register-groups-bind (c u) ("(\\d*) *(.*)" part)
+          (decf sum (* (or (decode-integer c errorp) (return NIL))
+                       (or (decode-unit u errorp) (return NIL)))))))))
+
+(define-parser parse-rfc3339-like (string)
   ;; 2023.09.15T20:35:42Z
   (with-integers-bound (y o d h m s) ("^(?:(\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?[t\\- ]+)?~
-                                        (\\d+):+(\\d+)(?::+(\\d+))?(?:\\.+\\d*)?" string)
+                                            (\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?" string)
     (backfill-timestamp y o d h m s (parse-timezone string))))
 
-(defun parse-iso8661-like (string)
+(define-parser parse-iso8661-like (string)
   ;; 20230915T203542Z
   (with-integers-bound (y o d h m s) ("^(?:(\\d{4})?(\\d{2})(\\d{2})[t\\- ]+)?~
                                         (\\d{2})(\\d{2})(\\d{2})?" string)
     (backfill-timestamp y o d h m s (parse-timezone string))))
 
-(defun parse-human-like (string)
+(define-parser parse-reverse-like (string)
   ;; 22:48:34 15.9.2023 GMT
-  (with-integers-bound (h m s d o y) ("^(?:(\\d+):(\\d+)(?::(\\d+))?[t\\- ]+)?~
-                                        (\\d+)[./-](\\d+)(?:[./-](\\d+))?" string)
+  (with-integers-bound (h m s d o y) ("^(?:(\\d+)[ .:\\-](\\d+)(?:[ .:\\-](\\d+))?[t\\- ]+)?~
+                                        (\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?" string)
     (backfill-timestamp y o d h m s (parse-timezone string))))
 
-(defun parse-rfc1123-like (string)
+(define-parser parse-rfc1123-like (string)
   ;; Thu, 23 Jul 2013 19:42:23 GMT
-  (or (with-integers-bound (_dow d _o y h m s) ("^(\\w+)[ ,./\\-]*(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
-                                           (?:[ ,./\\-]*(\\d+):+(\\d+)(?::+(\\d+))?(?:\\.+\\d*)?)?" string)
-        (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string)))
-      (with-integers-bound (d _o y h m s) ("^(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
-                                           (?:[ ,./\\-]*(\\d+):+(\\d+)(?::+(\\d+))?(?:\\.+\\d*)?)?" string)
-        (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string)))))
+  (with-integers-bound (_dow d _o y h m s) ("^(\\w+)[ ,./\\-]*(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
+                                              (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
+    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string)))
+  (with-integers-bound (d _o y h m s) ("^(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
+                                         (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
+    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string))))
 
-(defun parse-single (string)
+(define-parser parse-single (string)
   (with-scans string
     ("\\d+"
      (let ((stamp (parse-integer string)))
@@ -162,24 +233,11 @@
                 (encode-universal-time ls lm lh ld o (if (< lo o) ly (1+ ly))))))))))
 
 (defun parse (string &optional errorp)
-  (let ((string (string-downcase string)))
-    (or (parse-forward-time string)
-        (parse-backward-time string)
-        (parse-rfc3339-like string)
-        (parse-iso8661-like string)
-        (parse-human-like string)
-        (parse-rfc1123-like string)
-        (parse-single string)
-        (when errorp
-          (restart-case
-              (error "Unknown date string: ~a" string)
-            (use-value (v)
-              :report "Supply a universal time"
-              :interactive (lambda () 
-                             (format *query-io* "~&Enter a universal time: ")
-                             (parse-integer (read-line *query-io*)))
-              :test integerp
-              v)
-            (continue ()
-              :report "Return the current time"
-              (get-universal-time)))))))
+  (or (parse-forward-time string)
+      (parse-backward-time string)
+      (parse-rfc3339-like string)
+      (parse-iso8661-like string)
+      (parse-reverse-like string)
+      (parse-rfc1123-like string)
+      (parse-single string)
+      (check-error errorp string)))
