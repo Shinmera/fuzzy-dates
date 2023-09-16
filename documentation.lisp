@@ -81,7 +81,7 @@ Examples:
 
 The basic syntax is:
 
-  STAMP ::= in (C U)(, C U)*
+  STAMP ::= in (C U)(,? C U)*
   C     --- a positive integer
   U     --- a unit name
 
@@ -100,7 +100,7 @@ See PARSE")
 
 The basic syntax is:
 
-  STAMP ::= (C U)(, C U)* ago
+  STAMP ::= (C U)(,? C U)* ago
   C     --- a positive integer
   U     --- a unit name
 

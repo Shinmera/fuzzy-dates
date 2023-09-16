@@ -72,10 +72,17 @@
   :depends-on (decoders))
 
 (define-test forward-time
-  :parent parsers)
+  :parent parsers
+  (is = (+ (get-universal-time) 10) (dates:parse-forward-time "in 10 seconds"))
+  (is = (+ (get-universal-time) (* 5 60) 3) (dates:parse-forward-time "in 5 minutes, 3 s"))
+  (is = (+ (get-universal-time) (* 4 60 60)) (dates:parse-forward-time "in four hours"))
+  (is = (+ (get-universal-time) (* 42 60 60) 10) (dates:parse-forward-time "in forty two hours ten seconds")))
 
 (define-test backward-time
-  :parent parsers)
+  :parent parsers
+  (is = (- (get-universal-time) 10) (dates:parse-backward-time "10 seconds ago"))
+  (is = (- (get-universal-time) (* 30 60 60)) (dates:parse-backward-time "thirty hours ago"))
+  (is = (- (get-universal-time) 3 (* 2 60)) (dates:parse-backward-time "3 s, 2 minutes ago")))
 
 (define-test rfc3339
   :parent parsers)

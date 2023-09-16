@@ -168,23 +168,35 @@
        (* (if (string= "-" _+) -1 +1)
           (+ (* (or oh 0) (/ (or om 0) 60)))))))
 
+(defun parse-relative-time (string errorp)
+  (let ((sum 0)
+        (accum ()))
+    ;; We loop until we find a unit and then use all preceding tokens as an integer
+    (dolist (part (cl-ppcre:split "[ ,]+(and[ ,]+)?" string))
+      (let ((u (decode-unit part)))
+        (cond (u
+               (incf sum (* u
+                            (or (decode-integer (format NIL "~{~a~^ ~}" (nreverse accum)) errorp)
+                                (return NIL))))
+               (setf accum ()))
+              (T
+               (push part accum)))))
+    ;; If we have non-unit tokens leftover, we fail to parse.
+    (if accum
+        (check-error errorp string)
+        sum)))
+
 (define-parser parse-forward-time (string errorp)
   ;; in 5m, 9s
   (cl-ppcre:register-groups-bind (parts) ("^in *(.*)$" string)
-    (let ((sum (get-universal-time)))
-      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
-        (cl-ppcre:register-groups-bind (c u) ("([\\d\\w]*) *(.*)" part)
-          (incf sum (* (or (decode-integer c errorp) (return NIL))
-                       (or (decode-unit u errorp) (return NIL)))))))))
+    (let ((offset (parse-relative-time parts errorp)))
+      (when offset (+ (get-universal-time) offset)))))
 
 (define-parser parse-backward-time (string errorp)
   ;; 10 seconds ago
   (cl-ppcre:register-groups-bind (parts) ("^(.*) *ago$" string)
-    (let ((sum (get-universal-time)))
-      (dolist (part (cl-ppcre:split "[, ]+" parts) sum)
-        (cl-ppcre:register-groups-bind (c u) ("(\\d*) *(.*)" part)
-          (decf sum (* (or (decode-integer c errorp) (return NIL))
-                       (or (decode-unit u errorp) (return NIL)))))))))
+    (let ((offset (parse-relative-time parts errorp)))
+      (when offset (- (get-universal-time) offset)))))
 
 (define-parser parse-rfc3339-like (string)
   ;; 2023.09.15T20:35:42Z
