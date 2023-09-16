@@ -19,7 +19,7 @@
                                  `(T ,@body)
                                  `((cl-ppcre:scan ,(format NIL "^~a$" regex) ,varg) ,@body)))))))
 
-(defun gcheck-error (errorp string)
+(defun check-error (errorp string)
   (when errorp
     (restart-case
         (error "Unknown date string: ~a" string)
@@ -59,8 +59,8 @@
   (with-scans w
     ("(mo|mon|monday)" 0)
     ("(tu|tue|tuesday)" 1)
-    ("(th|thu|thursday)" 2)
-    ("(we|wed|wednesday)" 3)
+    ("(we|wed|wednesday)" 2)
+    ("(th|thu|thursday)" 3)
     ("(fr|fri|friday)" 4)
     ("(sa|sat|saturday)" 5)
     ("(su|sun|sunday)" 6)
@@ -104,16 +104,18 @@
 (defun decode-integer (i &optional errorp)
   (with-scans i
     (".*[ -].*"
-     (let ((total 0) (prev most-positive-fixnum))
-       (loop for part in (cl-ppcre:split "[ -]" i)
+     (let ((total 0) (accum 0) (prev most-positive-fixnum))
+       (loop for part in (cl-ppcre:split "[ -]+(and[ -]+)?" i)
              for int = (or (decode-integer part errorp)
                            (return-from decode-integer NIL))
              do (if (< prev int)
-                    (setf total (* int total))
-                      (incf total int))
+                    (progn (incf total (* int accum))
+                           (setf accum 0))
+                    (incf accum int))
                 (setf prev int))
-       total))
+       (+ total accum)))
     ("\\d+" (parse-integer i))
+    ("zero|nil|none" 0)
     ("one" 1)
     ("two" 2)
     ("three" 3)
@@ -151,7 +153,6 @@
 (defun decode-timezone (tz &optional errorp)
   (or (when (or (null tz) (string= "z" tz) (string= "" tz)) 0)
       (gethash tz *tzdb*)
-             when int
       (when errorp (error "Unknown time zone: ~a" tz))))
 
 (defmacro define-parser (name (strvar &optional (errorp (gensym "ERRORP"))) &body body)
