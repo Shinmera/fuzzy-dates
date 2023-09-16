@@ -85,19 +85,24 @@
   (is = (- (get-universal-time) 3 (* 2 60)) (dates:parse-backward-time "3 s, 2 minutes ago")))
 
 (define-test rfc3339
-  :parent parsers)
+  :parent parsers
+  (is = (encode-universal-time 15 6 10 16 9 2023 NIL) (dates:parse-rfc3339-like "2023-09-16T10:06:15.00Z")))
 
 (define-test iso8661
-  :parent parsers)
+  :parent parsers
+  (is = (encode-universal-time 15 6 10 16 9 2023 NIL) (dates:parse-iso8661-like "20230916T100615Z")))
 
 (define-test reverse
-  :parent parsers)
+  :parent parsers
+  (is = (encode-universal-time 15 6 10 16 9 2023) (dates:parse-reverse-like "10:6:15 16.9.2023")))
 
 (define-test rfc1123
-  :parent parsers)
+  :parent parsers
+  (is = (encode-universal-time 15 6 10 16 9 2023) (dates:parse-rfc1123-like "16 Sep 2023 10:06:15" T)))
 
 (define-test single
-  :parent parsers)
+  :parent parsers
+  (is = (+ (get-universal-time) 10) (dates:parse-single "10")))
 
 (define-test parse
   :parent fuzzy-dates

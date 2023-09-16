@@ -163,7 +163,7 @@
 
 (define-parser parse-timezone (string)
   ;; JST+5:00
-  (with-integers-bound (_z _+ oh om) ("(\\w+)? *([+\\-])(\\d{1,2})(?::*(\\d+))?$" string)
+  (with-integers-bound (_z _+ oh om) ("([A-Za-z]+)? *([+\\-])(\\d{1,2})(?::*(\\d+))?$" string)
     (+ (decode-timezone _z)
        (* (if (string= "-" _+) -1 +1)
           (+ (* (or oh 0) (/ (or om 0) 60)))))))
@@ -218,10 +218,10 @@
 
 (define-parser parse-rfc1123-like (string)
   ;; Thu, 23 Jul 2013 19:42:23 GMT
-  (with-integers-bound (_dow d _o y h m s) ("^(\\w+)[ ,./\\-]*(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
+  (with-integers-bound (_dow d _o y h m s) ("^([A-Za-z]+)[ ,./\\-]*(\\d+)[ ,./\\-]*([A-Za-z]+)[ ,./\\-]*(\\d+)~
                                               (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
     (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string)))
-  (with-integers-bound (d _o y h m s) ("^(\\d+)[ ,./\\-]*(\\w+)[ ,./\\-]*(\\d+)~
+  (with-integers-bound (d _o y h m s) ("^(\\d+)[ ,./\\-]*([A-Za-z]+)[ ,./\\-]*(\\d+)~
                                          (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
     (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string))))
 
@@ -236,7 +236,7 @@
                 (encode-universal-time ls lm lh ld lo stamp)))
              (T ;; A UNIX timestamp
               (+ stamp (encode-universal-time 0 0 0 1 1 1970 NIL))))))
-    ("\\w+"
+    ("[A-Za-z]+"
      (let ((w (decode-weekday string))
            (o (decode-month string)))
        (multiple-value-bind (ls lm lh ld lo ly lw) (decode-universal-time (get-universal-time))
