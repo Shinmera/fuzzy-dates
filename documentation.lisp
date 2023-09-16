@@ -91,6 +91,13 @@ Examples:
   in 5 minutes, 10 years
   in five hours
 
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
 See DECODE-UNIT
 See DECODE-INTEGER
 See PARSE")
@@ -108,6 +115,13 @@ Examples:
   10 seconds ago
   6 years, 5 minutes ago
   thirty hours ago
+
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
 
 See DECODE-UNIT
 See DECODE-INTEGER
@@ -138,6 +152,13 @@ It permits date and time parts to not be padded.
 It also permits omitting the date and timezone parts of the
 timestamp.
 
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
 See PARSE")
   
   (function parse-iso8661-like
@@ -159,6 +180,13 @@ It permits date and time parts to not be padded.
 
 It also permits omitting the date and timezone parts of the
 timestamp.
+
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
 
 See PARSE")
   
@@ -187,6 +215,13 @@ It permits date and time parts to not be padded.
 It also permits omitting the time and timezone parts of the
 timestamp.
 
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
 See PARSE")
   
   (function parse-rfc1123-like
@@ -214,6 +249,13 @@ It permits date and time parts to not be padded.
 It also permits omitting the day of week, time, and timezone parts of
 the timestamp.
 
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
 See PARSE")
   
   (function parse-single
@@ -239,11 +281,21 @@ Examples:
   mon
   march
 
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
 See PARSE")
   
   (function parse
     "Fuzzily parse a time string into a universal-time timestamp.
 
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
 
 If ERRORP is true, failing to parse the string name will signal an
 error. Otherwise NIL is returned. When an error is signalled, two

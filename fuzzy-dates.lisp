@@ -19,7 +19,7 @@
                                  `(T ,@body)
                                  `((cl-ppcre:scan ,(format NIL "^~a$" regex) ,varg) ,@body)))))))
 
-(defun check-error (errorp string)
+(defun check-error (errorp string &optional (default (get-universal-time)))
   (when errorp
     (restart-case
         (error "Unknown date string: ~a" string)
@@ -32,10 +32,10 @@
         v)
       (continue ()
         :report "Return the current time"
-        (get-universal-time)))))
+        default))))
 
-(defun backfill-timestamp (y o d h m s tz)
-  (multiple-value-bind (ls lm lh ld lo ly) (apply #'decode-universal-time (get-universal-time) (if tz (list tz)))
+(defun backfill-timestamp (y o d h m s tz &optional (now (get-universal-time)))
+  (multiple-value-bind (ls lm lh ld lo ly) (apply #'decode-universal-time now (if tz (list tz)))
     (let ((time (apply #'encode-universal-time (or s ls) (or m lm) (or h lh) (or d ld) (or o lo) (or y ly) (if tz (list tz)))))
       (when (and y (< 100 y))
         (incf y 1900))
@@ -155,11 +155,13 @@
       (gethash tz *tzdb*)
       (when errorp (error "Unknown time zone: ~a" tz))))
 
-(defmacro define-parser (name (strvar &optional (errorp (gensym "ERRORP"))) &body body)
-  `(defun ,name (,strvar &optional ,errorp)
-     (let ((,strvar (string-downcase ,strvar)))
+(defmacro define-parser (name (strvar &optional nowvar (errorp (gensym "ERRORP"))) &body body)
+  `(defun ,name (string &key ,@(when nowvar '(now)) errorp)
+     (let ((,strvar (string-downcase string))
+           (,errorp errorp)
+           ,@(when nowvar `((,nowvar (or now (get-universal-time))))))
        (or ,@body
-           (check-error ,errorp ,strvar)))))
+           (check-error ,errorp ,strvar ,(or nowvar '(get-universal-time)))))))
 
 (define-parser parse-timezone (string)
   ;; JST+5:00
@@ -186,71 +188,72 @@
         (check-error errorp string)
         sum)))
 
-(define-parser parse-forward-time (string errorp)
+(define-parser parse-forward-time (string now errorp)
   ;; in 5m, 9s
   (cl-ppcre:register-groups-bind (parts) ("^in *(.*)$" string)
     (let ((offset (parse-relative-time parts errorp)))
-      (when offset (+ (get-universal-time) offset)))))
+      (when offset (+ now offset)))))
 
-(define-parser parse-backward-time (string errorp)
+(define-parser parse-backward-time (string now errorp)
   ;; 10 seconds ago
   (cl-ppcre:register-groups-bind (parts) ("^(.*) *ago$" string)
     (let ((offset (parse-relative-time parts errorp)))
-      (when offset (- (get-universal-time) offset)))))
+      (when offset (- now offset)))))
 
-(define-parser parse-rfc3339-like (string)
+(define-parser parse-rfc3339-like (string now)
   ;; 2023.09.15T20:35:42Z
   (with-integers-bound (y o d h m s) ("^(?:(\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?[t\\- ]+)?~
                                             (\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?" string)
-    (backfill-timestamp y o d h m s (parse-timezone string))))
+    (backfill-timestamp y o d h m s (parse-timezone string) now)))
 
-(define-parser parse-iso8661-like (string)
+(define-parser parse-iso8661-like (string now)
   ;; 20230915T203542Z
   (with-integers-bound (y o d h m s) ("^(?:(\\d{4})?(\\d{2})(\\d{2})[t\\- ]+)?~
                                         (\\d{2})(\\d{2})(\\d{2})?" string)
-    (backfill-timestamp y o d h m s (parse-timezone string))))
+    (backfill-timestamp y o d h m s (parse-timezone string) now)))
 
-(define-parser parse-reverse-like (string)
+(define-parser parse-reverse-like (string now)
   ;; 22:48:34 15.9.2023 GMT
   (with-integers-bound (h m s d o y) ("^(?:(\\d+)[ .:\\-](\\d+)(?:[ .:\\-](\\d+))?[t\\- ]+)?~
                                         (\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?" string)
-    (backfill-timestamp y o d h m s (parse-timezone string))))
+    (backfill-timestamp y o d h m s (parse-timezone string) now)))
 
-(define-parser parse-rfc1123-like (string)
+(define-parser parse-rfc1123-like (string now)
   ;; Thu, 23 Jul 2013 19:42:23 GMT
   (with-integers-bound (_dow d _o y h m s) ("^([A-Za-z]+)[ ,./\\-]*(\\d+)[ ,./\\-]*([A-Za-z]+)[ ,./\\-]*(\\d+)~
                                               (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
-    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string)))
+    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string) now))
   (with-integers-bound (d _o y h m s) ("^(\\d+)[ ,./\\-]*([A-Za-z]+)[ ,./\\-]*(\\d+)~
                                          (?:[t ,./\\-]*(\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?)?" string)
-    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string))))
+    (backfill-timestamp y (decode-month _o T) d h m s (parse-timezone string) now)))
 
-(define-parser parse-single (string)
+(define-parser parse-single (string now)
   (with-scans string
     ("\\d+"
      (let ((stamp (parse-integer string)))
        (cond ((< stamp 1000) ;; Seconds in the future
-              (+ stamp (get-universal-time)))
+              (+ stamp now))
              ((< stamp 5000) ;; A year relative to current time
-              (multiple-value-bind (ls lm lh ld lo) (decode-universal-time (get-universal-time))
+              (multiple-value-bind (ls lm lh ld lo) (decode-universal-time now)
                 (encode-universal-time ls lm lh ld lo stamp)))
              (T ;; A UNIX timestamp
               (+ stamp (encode-universal-time 0 0 0 1 1 1970 NIL))))))
     ("[A-Za-z]+"
      (let ((w (decode-weekday string))
            (o (decode-month string)))
-       (multiple-value-bind (ls lm lh ld lo ly lw) (decode-universal-time (get-universal-time))
+       (multiple-value-bind (ls lm lh ld lo ly lw) (decode-universal-time now)
          (cond (w ;; A day of the week relative to current time, always in the future
-                (+ (get-universal-time) (* (decode-unit "d") (if (< lw w) (- w lw) (- 7 (- lw w))))))
+                (+ now (* (decode-unit "d") (if (< lw w) (- w lw) (- 7 (- lw w))))))
                (o ;; A month relative to current time, always in the future
                 (encode-universal-time ls lm lh ld o (if (< lo o) ly (1+ ly))))))))))
 
-(defun parse (string &optional errorp)
-  (or (parse-forward-time string)
-      (parse-backward-time string)
-      (parse-rfc3339-like string)
-      (parse-iso8661-like string)
-      (parse-reverse-like string)
-      (parse-rfc1123-like string)
-      (parse-single string)
-      (check-error errorp string)))
+(defun parse (string &key now errorp)
+  (let ((now (or now (get-universal-time))))
+    (or (parse-forward-time string :now now)
+        (parse-backward-time string :now now)
+        (parse-rfc3339-like string :now now)
+        (parse-iso8661-like string :now now)
+        (parse-reverse-like string :now now)
+        (parse-rfc1123-like string :now now)
+        (parse-single string :now now)
+        (check-error errorp string now))))
