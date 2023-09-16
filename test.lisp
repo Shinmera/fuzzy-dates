@@ -73,16 +73,16 @@
 
 (define-test forward-time
   :parent parsers
-  (is = (+ (get-universal-time) 10) (dates:parse-forward-time "in 10 seconds"))
-  (is = (+ (get-universal-time) (* 5 60) 3) (dates:parse-forward-time "in 5 minutes, 3 s"))
-  (is = (+ (get-universal-time) (* 4 60 60)) (dates:parse-forward-time "in four hours"))
-  (is = (+ (get-universal-time) (* 42 60 60) 10) (dates:parse-forward-time "in forty two hours ten seconds")))
+  (is = (+ 0 10) (dates:parse-forward-time "in 10 seconds" :now 0))
+  (is = (+ 0 (* 5 60) 3) (dates:parse-forward-time "in 5 minutes, 3 s" :now 0))
+  (is = (+ 0 (* 4 60 60)) (dates:parse-forward-time "in four hours" :now 0))
+  (is = (+ 0 (* 42 60 60) 10) (dates:parse-forward-time "in forty two hours ten seconds" :now 0)))
 
 (define-test backward-time
   :parent parsers
-  (is = (- (get-universal-time) 10) (dates:parse-backward-time "10 seconds ago"))
-  (is = (- (get-universal-time) (* 30 60 60)) (dates:parse-backward-time "thirty hours ago"))
-  (is = (- (get-universal-time) 3 (* 2 60)) (dates:parse-backward-time "3 s, 2 minutes ago")))
+  (is = (- 0 10) (dates:parse-backward-time "10 seconds ago" :now 0))
+  (is = (- 0 (* 30 60 60)) (dates:parse-backward-time "thirty hours ago" :now 0))
+  (is = (- 0 3 (* 2 60)) (dates:parse-backward-time "3 s, 2 minutes ago" :now 0)))
 
 (define-test rfc3339
   :parent parsers
@@ -98,11 +98,11 @@
 
 (define-test rfc1123
   :parent parsers
-  (is = (encode-universal-time 15 6 10 16 9 2023) (dates:parse-rfc1123-like "16 Sep 2023 10:06:15" T)))
+  (is = (encode-universal-time 15 6 10 16 9 2023) (dates:parse-rfc1123-like "16 Sep 2023 10:06:15")))
 
 (define-test single
   :parent parsers
-  (is = (+ (get-universal-time) 10) (dates:parse-single "10")))
+  (is = (+ 0 10) (dates:parse-single "10" :now 0)))
 
 (define-test parse
   :parent fuzzy-dates
