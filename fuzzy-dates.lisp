@@ -66,6 +66,19 @@
     ("(su|sun|sunday)" 6)
     (T (when errorp (error "Unknown weekday: ~a" w)))))
 
+(defun encode-weekday (w &key length)
+  (let ((name (ecase w
+                (0 "monday")
+                (1 "tuesday")
+                (2 "wednesday")
+                (3 "thursday")
+                (4 "friday")
+                (5 "saturday")
+                (6 "sunday"))))
+    (if length
+        (subseq name 0 length)
+        name)))
+
 (defun decode-month (m &optional errorp)
   (with-scans m
     ("(ja|jan|january)" 1)
@@ -81,6 +94,24 @@
     ("(no|nov|november)" 11)
     ("(de|dec|december)" 12)
     (T (when errorp (error "Unknown month: ~a" m)))))
+
+(defun encode-month (m &key length)
+  (let ((name (ecase m
+                (1 "january")
+                (2 "february")
+                (3 "march")
+                (4 "april")
+                (5 "may")
+                (6 "june")
+                (7 "july")
+                (8 "august")
+                (9 "september")
+                (10 "october")
+                (11 "november")
+                (12 "december"))))
+    (if length
+        (subseq name 0 length)
+        name)))
 
 (defun decode-unit (u &optional errorp)
   (with-scans u
@@ -154,6 +185,11 @@
   (or (when (or (null tz) (string= "z" tz) (string= "" tz)) 0)
       (gethash tz *tzdb*)
       (when errorp (error "Unknown time zone: ~a" tz))))
+
+(defun encode-timezone (tz &optional stream)
+  (cond ((stringp tz) (write-string tz stream))
+        ((= 0 tz) (format stream "Z"))
+        (T (format stream "+~2,'0d~[~:;~:*:~2,'0d~]" (truncate tz) (mod (* tz 60) 60)))))
 
 (defmacro define-parser (name (strvar &optional nowvar (errorp (gensym "ERRORP"))) &body body)
   `(defun ,name (string &key ,@(when nowvar '(now)) errorp)
@@ -259,3 +295,107 @@
         (parse-rfc1123-like string :now now)
         (parse-single string :now now)
         (check-error errorp string now))))
+
+(defmacro define-printer (name (stream &optional ss mm hh d m y dow dsp tz) &body body)
+  (let ((binds (loop for var in (list ss mm hh d m y dow dsp tz)
+                     collect (or var (gensym)))))
+    `(defun ,name (stamp &optional stream time-zone)
+       (flet ((thunk (,stream)
+                (multiple-value-bind ,binds (decode-universal-time stamp time-zone)
+                  (declare (ignore ,@(loop for symb in binds
+                                           unless (symbol-package symb)
+                                           collect symb)))
+                  ,@body)))
+         (etypecase stream
+           (null
+            (with-output-to-string (stream)
+              (thunk stream)))
+           ((eql T)
+            (thunk *standard-output*))
+           (stream
+            (thunk stream)))))))
+
+(define-printer print-rfc3339 (stream ss mm hh d m y)
+  (format stream "~4,'0d.~2,'0d.~2,'0dT~2,'0d:~2,'0d:~2,'0d"
+          y m d hh mm ss)
+  (encode-timezone time-zone stream))
+
+(define-printer print-iso8661 (stream ss mm hh d m y)
+  (format stream "~4,'0d~2,'0d~2,'0dT~2,'0d~2,'0d~2,'0d"
+          y m d hh mm ss)
+  (encode-timezone time-zone stream))
+
+(define-printer print-reverse (stream ss mm hh d m y)
+  (format stream "~2,'0:d~2,'0:d~2,'0d ~2,'0d.~2,'0d.~4,'0d "
+          hh mm ss d m y)
+  (encode-timezone time-zone stream))
+
+(define-printer print-rfc1123 (stream ss mm hh d m y dow)
+  (format stream "~a, ~d ~a ~d ~d:~2,'0d:~2,'0d "
+          (encode-weekday dow :length 3) d
+          (encode-month m :length 3) y hh mm ss)
+  (encode-timezone time-zone stream))
+
+(define-printer print-date (stream NIL NIL NIL d m y)
+  (format stream "~4,'0d.~2,'0d.~2,'0d"
+          y m d))
+
+(define-printer print-clock (stream ss mm hh)
+  (format stream "~d:~2,'0d:~2,'0d"
+          hh mm ss))
+
+(defun print-relative (stamp &optional stream now)
+  (let ((diff (- stamp (or now (get-universal-time)))))
+    (labels ((format-relative (stream)
+               (let ((seconds   (mod (floor (/ diff 1)) 60))
+                     (minutes   (mod (floor (/ diff 60)) 60))
+                     (hours     (mod (floor (/ diff 60 60)) 24))
+                     (days      (mod (floor (/ diff 60 60 24)) 7))
+                     ;; We approximate by saying each month has four weeks
+                     (weeks     (mod (floor (/ diff 60 60 24 7)) 4))
+                     (months    (mod (floor (/ diff 60 60 24 7 4)) 12))
+                     ;; More accurate through diff in a year
+                     (years     (mod (floor (/ diff 31557600)) 10))
+                     (decades   (mod (floor (/ diff 31557600 10)) 10))
+                     (centuries (mod (floor (/ diff 31557600 10 10)) (expt 10 (- 9 2))))
+                     (aeons          (floor (/ diff 31557600 10 10 (expt 10 (- 9 2)))))
+                     (non-NIL ()))
+                 (flet ((p (i format) (when (< 0 i) (push (format NIL format i) non-NIL))))
+                   (p seconds "~a second~:p")
+                   (p minutes "~a minute~:p")
+                   (p hours "~a hour~:p")
+                   (p days "~a day~:p")
+                   (p weeks "~a week~:p")
+                   (p months "~a month~:p")
+                   (p years "~a year~:p")
+                   (p decades "~a decade~:p")
+                   (p centuries "~a centur~:@p")
+                   (p aeons "~a aeon~:p")
+                   (format stream "~{~a~^, ~}" non-NIL))))
+             (thunk (stream)
+               (cond ((= 0 diff)
+                      (format stream "now"))
+                     ((< 0 diff)
+                      (format stream "in ")
+                      (format-relative stream))
+                     (T
+                      (format-relative stream)
+                      (format stream " ago")))))
+      (etypecase stream
+        (null
+         (with-output-to-string (stream)
+           (thunk stream)))
+        ((eql T)
+         (thunk *standard-output*))
+        (stream
+         (thunk stream))))))
+
+(defun print (stamp &key (format :rfc3339) stream time-zone now)
+  (ecase format
+    (:rfc3339 (print-rfc3339 stamp stream time-zone))
+    (:iso8661 (print-iso8661 stamp stream time-zone))
+    (:reverse (print-reverse stamp stream time-zone))
+    (:rfc1123 (print-rfc1123 stamp stream time-zone))
+    (:relative (print-relative stamp stream now))
+    (:date (print-date stamp stream time-zone))
+    (:clock (print-clock stamp stream time-zone))))

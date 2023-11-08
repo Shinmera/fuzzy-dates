@@ -1,5 +1,6 @@
 (defpackage #:org.shirakumo.fuzzy-dates
   (:use #:cl)
+  (:shadow #:print)
   (:export
    #:decode-weekday
    #:decode-month
@@ -13,4 +14,12 @@
    #:parse-reverse-like
    #:parse-rfc1123-like
    #:parse-single
-   #:parse))
+   #:parse
+   #:print-rfc3339
+   #:print-iso8661
+   #:print-reverse
+   #:print-rfc1123
+   #:print-relative
+   #:print-date
+   #:print-clock
+   #:print))
