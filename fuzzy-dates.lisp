@@ -238,6 +238,8 @@
                 (encode-universal-time ls lm lh ld lo stamp)))
              (T ;; A UNIX timestamp
               (+ stamp (encode-universal-time 0 0 0 1 1 1970 NIL))))))
+    ("(just +)?now"
+     now)
     ("[A-Za-z]+"
      (let ((w (decode-weekday string))
            (o (decode-month string)))
