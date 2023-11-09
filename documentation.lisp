@@ -312,4 +312,113 @@ See PARSE-RFC3339-LIKE
 See PARSE-ISO8661-LIKE
 See PARSE-REVERSE-LIKE
 See PARSE-RFC1123-LIKE
-See PARSE-SINGLE"))
+See PARSE-SINGLE")
+
+  (function print-rfc3339
+    "Print a universal-time in the RFC3339 format.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-RFC3339-LIKE")
+
+  (function print-iso8661
+    "Print a universal-time in the ISO8661 format.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-ISO8661-LIKE")
+  (function print-reverse
+    "Print a universal-time in a format that is \"reverse\" from the others.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-REVERSE-LIKE")
+
+  (function print-rfc1123
+    "Print a universal-time in the RFC1123 format.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-RFC1123-LIKE")
+
+  (function print-relative
+    "Print a universal-time as a relative amount of time.
+
+If NOW is given it should be a universal-time timestamp that the
+printed timestring will be relative to. If not given, the current time
+is used.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-FORWARD-TIME
+See PARSE-BACKWARD-TIME")
+
+  (function print-date
+    "Print a universal-time as a YYY.MM.DD date.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-SINGLE")
+
+  (function print-clock
+    "Print a universal-time as a HH:MM:SS time.
+
+TIME-ZONE may either be a time zone short name string, a time zone
+offset as specified by Common Lisp, or NIL for UTC.
+
+If STREAM is NIL, the result is printed to a string and returned. If
+STREAM is T, the result is printed to *STANDARD-OUTPUT*.
+
+See PRINT
+See PARSE-SINGLE")
+
+  (function print
+    "Print a universal-time stamp into a print representation.
+
+FORMAT may be one of the following:
+
+  :RFC3339  -- PRINT-RFC3339
+  :ISO8661  -- PRINT-ISO8661
+  :REVERSE  -- PRINT-REVERSE
+  :RFC1123  -- PRINT-RFC1123
+  :RELATIVE -- PRINT-RELATIVE
+  :DATE     -- PRINT-DATE
+  :CLOCK    -- PRINT-CLOCK
+
+The STREAM and TIME-ZONE are passed along. NOW is only used for the
+:RELATIVE format.
+
+See PRINT-RFC3339
+See PRINT-ISO8661
+See PRINT-REVERSE
+See PRINT-RFC1123
+See PRINT-RELATIVE
+See PRINT-DATE
+See PRINT-CLOCK"))
