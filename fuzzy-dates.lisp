@@ -301,7 +301,10 @@
                      collect (or var (gensym)))))
     `(defun ,name (stamp &optional stream time-zone)
        (flet ((thunk (,stream)
-                (multiple-value-bind ,binds (decode-universal-time stamp time-zone)
+                (multiple-value-bind ,binds (decode-universal-time stamp (etypecase time-zone
+                                                                           (null NIL)
+                                                                           (string (gethash time-zone *tzdb*))
+                                                                           (real time-zone)))
                   (declare (ignore ,@(loop for symb in binds
                                            unless (symbol-package symb)
                                            collect symb)))
