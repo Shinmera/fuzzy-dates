@@ -14,6 +14,12 @@ Examples:
   mo
   tue
   thursday")
+
+  (function encode-weekday
+    "Turn a weekday identifier [0,6] into its english string name.
+
+See http://www.lispworks.com/documentation/HyperSpec/Body/25_ada.htm
+See DECODE-WEEKDAY")
   
   (function decode-month
     "Turn a month name into an integer between 1 and 12.
@@ -28,6 +34,12 @@ Examples:
   ja
   feb
   march")
+
+  (function encode-month
+    "Turn a month identifier [1,12] into its english string name.
+
+See http://www.lispworks.com/documentation/HyperSpec/Body/25_ada.htm
+See DECODE-MONTH")
   
   (function decode-unit
     "Turn a unit name into a scaling factor relative to seconds.

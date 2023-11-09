@@ -3,7 +3,9 @@
   (:shadow #:print)
   (:export
    #:decode-weekday
+   #:encode-weekday
    #:decode-month
+   #:encode-month
    #:decode-unit
    #:decode-timezone
    #:decode-integer
