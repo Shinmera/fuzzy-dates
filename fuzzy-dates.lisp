@@ -44,16 +44,16 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun parse-tzdb (db)
     (with-open-file (stream db)
-      (let ((db (make-hash-table :test 'equal)))
+      (let ((db (make-hash-table :test 'equalp)))
         (loop for line = (read-line stream NIL)
               while line
               unless (and (<= (length line) 1) (char= (char line 0) #\#))
               collect (with-integers-bound (_z _+ h m) ("(\\w+) *([+-])?(\\d+)(?::(\\d+))?" line)
                         (setf (gethash (string-downcase _z) db)
-                              (* (if (string= _+ "-") -1 +1) (+ h (/ (or m 0) 60))))))
+                              (- (* (if (string= _+ "-") -1 +1) (+ h (/ (or m 0) 60)))))))
         db))))
 
-(defvar *tzdb* (parse-tzdb #.(make-pathname :name "tz" :type "txt" :defaults (or *compile-file-pathname* *load-pathname*))))
+(defparameter *tzdb* (parse-tzdb #.(make-pathname :name "tz" :type "txt" :defaults (or *compile-file-pathname* *load-pathname*))))
 
 (defun decode-weekday (w &optional errorp)
   (with-scans w
