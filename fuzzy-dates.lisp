@@ -201,10 +201,13 @@
 
 (define-parser parse-timezone (string)
   ;; JST+5:00
-  (with-integers-bound (_z _+ oh om) ("([A-Za-z]+)? *([+\\-])(\\d{1,2})(?::*(\\d+))?$" string)
-    (+ (decode-timezone _z)
-       (* (if (string= "-" _+) -1 +1)
-          (+ (* (or oh 0) (/ (or om 0) 60)))))))
+  (or (with-integers-bound (_z _+ oh om) ("([A-Za-z]+)(?: *([+\\-])(\\d{1,2})(?::*(\\d+))?)?$" string)
+        (+ (decode-timezone (string-downcase _z))
+           (* (if (string= "-" _+) -1 +1)
+              (+ (* (or oh 0) (/ (or om 0) 60))))))
+      (with-integers-bound (_+ oh om) ("([+\\-])(\\d{1,2})(?::*(\\d+))?$" string)
+        (* (if (string= "-" _+) -1 +1)
+           (+ (* (or oh 0) (/ (or om 0) 60)))))))
 
 (defun parse-relative-time (string errorp)
   (let ((sum 0)
