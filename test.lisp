@@ -86,11 +86,11 @@
 
 (define-test rfc3339
   :parent parsers
-  (is = (encode-universal-time 15 6 10 16 9 2023 NIL) (dates:parse-rfc3339-like "2023-09-16T10:06:15.00Z")))
+  (is = (encode-universal-time 15 6 10 16 9 2023 0) (dates:parse-rfc3339-like "2023-09-16T10:06:15.00Z")))
 
 (define-test iso8661
   :parent parsers
-  (is = (encode-universal-time 15 6 10 16 9 2023 NIL) (dates:parse-iso8661-like "20230916T100615Z")))
+  (is = (encode-universal-time 15 6 10 16 9 2023 0) (dates:parse-iso8661-like "20230916T100615Z")))
 
 (define-test reverse
   :parent parsers
