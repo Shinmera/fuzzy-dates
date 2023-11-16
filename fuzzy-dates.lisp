@@ -188,7 +188,7 @@
 
 (defun encode-timezone (tz &optional stream)
   (cond ((stringp tz) (write-string tz stream))
-        ((= 0 tz) (format stream "Z"))
+        ((or (null tz) (= 0 tz)) (format stream "Z"))
         (T (format stream "+~2,'0d~[~:;~:*:~2,'0d~]" (truncate tz) (mod (* tz 60) 60)))))
 
 (defmacro define-parser (name (strvar &optional nowvar (errorp (gensym "ERRORP"))) &body body)
