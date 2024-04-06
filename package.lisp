@@ -11,6 +11,7 @@
    #:decode-integer
    #:parse-forward-time
    #:parse-backward-time
+   #:parse-date
    #:parse-rfc3339-like
    #:parse-iso8661-like
    #:parse-reverse-like

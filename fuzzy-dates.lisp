@@ -239,10 +239,19 @@
     (let ((offset (parse-relative-time parts errorp)))
       (when offset (- now offset)))))
 
+(define-parser parse-date (string now)
+  ;; 2023/09/15
+  ;; 9.2023
+  (with-integers-bound (y o d) ("^(\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?$" string)
+    (if d
+        (when (< 31 d) (rotatef y d))
+        (when (< 12 o) (rotatef y o)))
+    (backfill-timestamp y o d NIL NIL NIL NIL now)))
+
 (define-parser parse-rfc3339-like (string now)
   ;; 2023.09.15T20:35:42Z
   (with-integers-bound (y o d h m s) ("^(?:(\\d+)[ ,./\\-](\\d+)(?:[ ,./\\-](\\d+))?[t\\- ]+)?~
-                                            (\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?" string)
+                                           (\\d+)[ .:\\-]+(\\d+)(?:[ .:\\-]+(\\d+))?(?:\\.+\\d*)?" string)
     (backfill-timestamp y o d h m s (parse-timezone string) now)))
 
 (define-parser parse-iso8661-like (string now)
@@ -292,6 +301,7 @@
   (let ((now (or now (get-universal-time))))
     (or (parse-forward-time string :now now)
         (parse-backward-time string :now now)
+        (parse-date string :now now)
         (parse-rfc3339-like string :now now)
         (parse-iso8661-like string :now now)
         (parse-reverse-like string :now now)

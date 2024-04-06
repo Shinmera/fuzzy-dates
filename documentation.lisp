@@ -138,6 +138,32 @@ is used.
 See DECODE-UNIT
 See DECODE-INTEGER
 See PARSE")
+
+  (function parse-date
+    "Parse a timestamp that only includes a date but not a time.
+
+A typical date string has the following format:
+
+  2023.09.16
+
+This function is more lenient, and makes the following fuzzy matches:
+It permits the following separators between date parts:
+
+  space comma period slash dash
+
+Further, it allows omitting the day part and allows switching the
+order around to D M Y rather than the standard Y M D. The american
+M D Y format is *not* parsed, as it is ambiguous with Y M D or D M Y
+and cannot be distinguished in all cases.
+
+If ERRORP is true, failing to parse the timestring will signal an
+error. Otherwise NIL is returned.
+
+If NOW is given it should be a universal-time timestamp that the
+parsed timestring will be relative to. If not given, the current time
+is used.
+
+See PARSE")
   
   (function parse-rfc3339-like
     "Parse a timestamp that looks vaguely like an RFC3339 date.
@@ -320,6 +346,7 @@ This also applies to all the sub-functions used.
 
 See PARSE-FORWARD-TIME
 See PARSE-BACKWARD-TIME
+See PARSE-DATE
 See PARSE-RFC3339-LIKE
 See PARSE-ISO8661-LIKE
 See PARSE-REVERSE-LIKE
