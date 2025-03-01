@@ -292,8 +292,11 @@
              ((< stamp 5000) ;; A year relative to current time
               (multiple-value-bind (ls lm lh ld lo) (decode-universal-time now)
                 (encode-universal-time ls lm lh ld lo stamp)))
-             (T ;; A UNIX timestamp
-              (+ stamp (encode-universal-time 0 0 0 1 1 1970 NIL))))))
+             (T ;; A UNIX or Universal timestamp
+              (let ((diff (abs (- stamp now))))
+                (if (< diff (encode-universal-time 0 0 0 1 1 1970 NIL))
+                    stamp
+                    (+ stamp (encode-universal-time 0 0 0 1 1 1970 NIL))))))))
     ("(just +)?now"
      now)
     ("[A-Za-z]+"
