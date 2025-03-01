@@ -285,8 +285,8 @@
 
 (define-parser parse-single (string now)
   (with-scans string
-    ("\\d+"
-     (let ((stamp (parse-integer string)))
+    ("\\d+(\\.\\d+)"
+     (let ((stamp (parse-integer string :junk-allowed T)))
        (cond ((< stamp 1000) ;; Seconds in the future
               (+ stamp now))
              ((< stamp 5000) ;; A year relative to current time
