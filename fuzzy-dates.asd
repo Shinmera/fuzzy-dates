@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "A library to fuzzily parse date strings"
-  :homepage "https://shinmera.github.io/fuzzy-dates/"
-  :bug-tracker "https://github.com/shinmera/fuzzy-dates/issues"
-  :source-control (:git "https://github.com/shinmera/fuzzy-dates.git")
+  :homepage "https://shinmera.com/docs/fuzzy-dates/"
+  :bug-tracker "https://shinmera.com/project/fuzzy-dates/issues"
+  :source-control (:git "https://shinmera.com/project/fuzzy-dates.git")
   :serial T
   :components ((:file "package")
                (:file "fuzzy-dates")
@@ -21,9 +21,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "Tests for fuzzy-dates"
-  :homepage "https://shinmera.github.io/fuzzy-dates/"
-  :bug-tracker "https://github.com/shinmera/fuzzy-dates/issues"
-  :source-control (:git "https://github.com/shinmera/fuzzy-dates.git")
+  :homepage "https://shinmera.com/docs/fuzzy-dates/"
+  :bug-tracker "https://shinmera.com/project/fuzzy-dates/issues"
+  :source-control (:git "https://shinmera.com/project/fuzzy-dates.git")
   :serial T
   :components ((:file "test"))
   :depends-on (:fuzzy-dates :parachute)
